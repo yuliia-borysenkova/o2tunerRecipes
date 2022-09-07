@@ -1,0 +1,154 @@
+stages_user:
+    simulation_stage_0:
+        cmd: $O2DPG_ROOT/MC/bin/o2dpg_sim_workflow_evolution.py -eCM 13600 -gen pythia8pp --modules PIPE ITS -ns 2000 -tf 1 -confKey "Diamond.width[2]=6.;Diamond.width[0]=0.01;Diamond.width[1]=0.01"
+        cwd: simulation_0
+    simulation_stage_1:
+        cmd: $O2DPG_ROOT/MC/bin/o2_dpg_workflow_runner.py -f ../simulation_0/workflow.json -tt its_reco
+        cwd: simulation_1
+        deps:
+            - simulation_stage_0
+
+stages_optimisation:
+    optimisation_loss_0:
+        file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
+        entrypoint: objective
+        trials: 10
+        study:
+            name: optimisation_loss_0
+        cwd: optimisation_loss_0
+        config:
+            loss_name: efficiency
+        deps:
+            - simulation_stage_0
+            - simulation_stage_1
+
+    optimisation_loss_1:
+        file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
+        entrypoint: objective
+        trials: 10
+        study:
+            name: optimisation_loss_1
+        cwd: optimisation_loss_1
+        config:
+            loss_name: purity
+        deps:
+            - simulation_stage_0
+            - simulation_stage_1
+
+    optimisation_loss_2:
+        file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
+        entrypoint: objective
+        trials: 400
+        study:
+            name: optimisation_loss_2
+        cwd: optimisation_loss_2
+        config:
+            loss_name: purity>0.7
+        deps:
+            - simulation_stage_0
+            - simulation_stage_1
+
+    optimisation_loss_3:
+        file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
+        entrypoint: objective
+        trials: 400
+        study:
+            name: optimisation_loss_3
+        cwd: optimisation_loss_3
+        config:
+            loss_name: mixed
+        deps:
+            - simulation_stage_0
+            - simulation_stage_1
+    
+    #optimisation for phi only
+    optimisation_loss_0_Phi:
+        file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
+        entrypoint: objective_Phi
+        trials: 400
+        study:
+            name: optimisation_loss_0_Phi
+        cwd: optimisation_loss_0_Phi
+        config:
+            loss_name: efficiency
+        deps:
+            - simulation_stage_0
+            - simulation_stage_1
+
+    optimisation_loss_1_Phi:
+        file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
+        entrypoint: objective_Phi
+        trials: 400
+        study:
+            name: optimisation_loss_1_Phi
+        cwd: optimisation_loss_1_Phi
+        config:
+            loss_name: purity
+        deps:
+            - simulation_stage_0
+            - simulation_stage_1
+
+    #optimisation for NContrCut only
+    optimisation_loss_0_NContr:
+        file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
+        entrypoint: objective_NContr
+        trials: 400
+        study:
+            name: optimisation_loss_0_NContr
+        cwd: optimisation_loss_0_NContr
+        config:
+            loss_name: efficiency
+        deps:
+            - simulation_stage_0
+            - simulation_stage_1
+
+    optimisation_loss_1_NContr:
+        file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
+        entrypoint: objective_NContr
+        trials: 400
+        study:
+            name: optimisation_loss_1_NContr
+        cwd: optimisation_loss_1_NContr
+        config:
+            loss_name: purity
+        deps:
+            - simulation_stage_0
+            - simulation_stage_1
+
+stages_evaluation:
+    evaluate:
+        file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
+        entrypoint: evaluate
+        optimisations:
+            - optimisation_loss_0
+            - optimisation_loss_1
+            - optimisation_loss_2
+            - optimisation_loss_3
+        cwd: evaluate
+        deps:
+            - optimisation_loss_0
+            - optimisation_loss_1
+            - optimisation_loss_2
+            - optimisation_loss_3
+
+    evaluate_Phi:
+        file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
+        entrypoint: evaluate_Phi
+        optimisations:
+            - optimisation_loss_0_Phi
+            - optimisation_loss_1_Phi
+        cwd: evaluate_Phi
+        deps:
+            - optimisation_loss_0_Phi
+            - optimisation_loss_1_Phi
+
+    evaluate_NContr:
+        file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
+        entrypoint: evaluate_NContr
+        optimisations:
+            - optimisation_loss_0_NContr
+            - optimisation_loss_1_NContr
+        cwd: evaluate_Phi
+        deps:
+            - optimisation_loss_0_NContr
+            - optimisation_loss_1_NContr
