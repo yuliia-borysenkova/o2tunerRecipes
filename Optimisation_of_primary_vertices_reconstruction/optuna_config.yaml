@@ -12,12 +12,12 @@ stages_optimisation:
     optimisation_loss_0:
         file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
         entrypoint: objective
-        trials: 10
+        trials: 200
         study:
             name: optimisation_loss_0
         cwd: optimisation_loss_0
         config:
-            loss_name: efficiency
+            loss_name: efficiency_good
         deps:
             - simulation_stage_0
             - simulation_stage_1
@@ -25,7 +25,7 @@ stages_optimisation:
     optimisation_loss_1:
         file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
         entrypoint: objective
-        trials: 10
+        trials: 200
         study:
             name: optimisation_loss_1
         cwd: optimisation_loss_1
@@ -38,12 +38,12 @@ stages_optimisation:
     optimisation_loss_2:
         file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
         entrypoint: objective
-        trials: 400
+        trials: 200
         study:
             name: optimisation_loss_2
         cwd: optimisation_loss_2
         config:
-            loss_name: purity>0.7
+            loss_name: efficiency_total
         deps:
             - simulation_stage_0
             - simulation_stage_1
@@ -51,66 +51,12 @@ stages_optimisation:
     optimisation_loss_3:
         file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
         entrypoint: objective
-        trials: 400
+        trials: 500
         study:
             name: optimisation_loss_3
         cwd: optimisation_loss_3
         config:
             loss_name: mixed
-        deps:
-            - simulation_stage_0
-            - simulation_stage_1
-    
-    #optimisation for phi only
-    optimisation_loss_0_Phi:
-        file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
-        entrypoint: objective_Phi
-        trials: 400
-        study:
-            name: optimisation_loss_0_Phi
-        cwd: optimisation_loss_0_Phi
-        config:
-            loss_name: efficiency
-        deps:
-            - simulation_stage_0
-            - simulation_stage_1
-
-    optimisation_loss_1_Phi:
-        file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
-        entrypoint: objective_Phi
-        trials: 400
-        study:
-            name: optimisation_loss_1_Phi
-        cwd: optimisation_loss_1_Phi
-        config:
-            loss_name: purity
-        deps:
-            - simulation_stage_0
-            - simulation_stage_1
-
-    #optimisation for NContrCut only
-    optimisation_loss_0_NContr:
-        file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
-        entrypoint: objective_NContr
-        trials: 400
-        study:
-            name: optimisation_loss_0_NContr
-        cwd: optimisation_loss_0_NContr
-        config:
-            loss_name: efficiency
-        deps:
-            - simulation_stage_0
-            - simulation_stage_1
-
-    optimisation_loss_1_NContr:
-        file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
-        entrypoint: objective_NContr
-        trials: 400
-        study:
-            name: optimisation_loss_1_NContr
-        cwd: optimisation_loss_1_NContr
-        config:
-            loss_name: purity
         deps:
             - simulation_stage_0
             - simulation_stage_1
@@ -130,25 +76,3 @@ stages_evaluation:
             - optimisation_loss_1
             - optimisation_loss_2
             - optimisation_loss_3
-
-    evaluate_Phi:
-        file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
-        entrypoint: evaluate_Phi
-        optimisations:
-            - optimisation_loss_0_Phi
-            - optimisation_loss_1_Phi
-        cwd: evaluate_Phi
-        deps:
-            - optimisation_loss_0_Phi
-            - optimisation_loss_1_Phi
-
-    evaluate_NContr:
-        file: /home/yborysen/work/software/baseline/optuna_scripts/optimise.py
-        entrypoint: evaluate_NContr
-        optimisations:
-            - optimisation_loss_0_NContr
-            - optimisation_loss_1_NContr
-        cwd: evaluate_Phi
-        deps:
-            - optimisation_loss_0_NContr
-            - optimisation_loss_1_NContr

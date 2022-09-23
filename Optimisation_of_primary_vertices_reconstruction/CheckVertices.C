@@ -75,18 +75,23 @@ struct RecVertexInfo
   float Vy;
   float Vz;
   unsigned int NumContr = 0u;
-  std::map<unsigned int, unsigned int> LabelMap;
-  int GetTopLabel() const
+  std::map<int, unsigned int> LabelMap;
+  int GetTopLabel() // const
   {
     if (LabelMap.size() == 0)
       return -1;
-    std::vector<std::pair<unsigned int, unsigned int>> vec;
+    if (LabelMap.size() == 1 && LabelMap[-1] != 0)
+      return -1;
+    std::vector<std::pair<int, unsigned int>> vec;
     vec.reserve(LabelMap.size());
     for (auto &i : LabelMap)
       vec.push_back(i);
-    std::sort(vec.begin(), vec.end(), [=](std::pair<unsigned int, unsigned int> &left, std::pair<unsigned int, unsigned int> &right)
+    std::sort(vec.begin(), vec.end(), [=](std::pair<int, unsigned int> &left, std::pair<int, unsigned int> &right)
               { return left.second > right.second; });
-    return vec[0].first;
+    if (vec[0].first != -1)
+      return vec[0].first;
+    else
+      return vec[1].first;
   }
   double Purity() // purity : % of top label
   {
@@ -339,31 +344,6 @@ void CheckVertices(std::string tracfile = "o2trac_its.root", std::string clusfil
     }
   }
 
-  // Some interesting statistic for simulated data
-  /*
-  ////loop over all particles
-  Ntot = 53703504 (all particles in all events)
-  Nnor = 10792048 -> 20.0956% (particles that easy to find in the scheme)
-  Nstr = 42911456 -> 79.9044% (all the rest)
-  Nhadr = 42910983 -> 79.9035% (particle codes that longer than 4 digits)
-  Nnull = 473 -> 0.000880762% (code has less than 4 digits and missing from the table)
-  N_990 = 473 (num of particles with code 990 (pomeron))
-  ///////loop over all primary particles
-  Ntot = 1077886
-  Nnor = 1076609 -> 99.8815%
-  Nstr = 1277 -> 0.118473%
-  Nhadr = 804 -> 0.0745904%
-  Nnull = 473 -> 0.0438822%
-  N_990 = 473
-  ///////loop over primary particles with eta < 1.1, pt < pt_min
-  Ntot = 593131
-  Nnor = 592467 -> 99.8881%
-  Nstr = 664 -> 0.111948%
-  Nhadr = 390 -> 0.0657528%
-  Nnull = 274 -> 0.0461955%
-  N_990 = 274
-  */
-
   //============================================================================================================================
   // Reconstructed tracks
   // Filling the array with eventIDs
@@ -374,7 +354,8 @@ void CheckVertices(std::string tracfile = "o2trac_its.root", std::string clusfil
     for (unsigned int tracklet_i = 0; tracklet_i < recLabelsArr->size(); ++tracklet_i)
     {
       auto rec_tr = recLabelsArr->at(tracklet_i);
-      if (rec_tr.getEventID() == 524287)
+      // std::cout << rec_tr.getEventID() << "\t" << rec_tr.isFake() << "\t" << rec_tr.isSet() << "\t" << rec_tr.isValid() << "\n";
+      if (rec_tr.isFake())
         eventIdArr.push_back(-1);
       else
         eventIdArr.push_back(rec_tr.getEventID());
@@ -384,30 +365,6 @@ void CheckVertices(std::string tracfile = "o2trac_its.root", std::string clusfil
   // Filling the rec_info array
   std::vector<RecVertexInfo> rec_info;
   unsigned int point = 0;
-  /*
-    rec_info.resize(rec_info.size() + recVerArr->size());
-    for (int readout_frame = 0; readout_frame < recVerROFArr->size(); ++readout_frame)
-    {
-      for (int i_ver = (*recVerROFArr)[readout_frame].getFirstEntry(); i_ver < (*recVerROFArr)[readout_frame].getFirstEntry() + (*recVerROFArr)[readout_frame].getNEntries(); ++i_ver)
-      {
-        auto rec_ver = (*recVerArr)[i_ver]; // auto rec_ver = recVerArr->at(i_ver);
-        rec_info[i_ver].Vx = rec_ver.getX();
-        rec_info[i_ver].Vy = rec_ver.getY();
-        rec_info[i_ver].Vz = rec_ver.getZ();
-        rec_info[i_ver].NumContr = rec_ver.getNContributors();
-        vector<int> temp_labels;
-        for (unsigned int j = 0; j < rec_ver.getNContributors(); ++j)
-          temp_labels.push_back(eventIdArr[j + point]);
-        point += rec_ver.getNContributors();
-        // std::sort(std::begin(temp_labels), std::end(temp_labels));
-        for (unsigned int j = 0; j < temp_labels.size(); ++j)
-        {
-          if (temp_labels[j] == -1)
-            continue;
-          ++rec_info[i_ver].LabelMap[temp_labels[j]];
-        }
-      }
-    }*/
   for (int frame = 0; frame < recTree->GetEntries(); ++frame)
   {
     recTree->GetEvent(frame);
@@ -426,8 +383,8 @@ void CheckVertices(std::string tracfile = "o2trac_its.root", std::string clusfil
       // std::sort(std::begin(temp_labels), std::end(temp_labels));
       for (unsigned int j = 0; j < temp_labels.size(); ++j)
       {
-        if (temp_labels[j] == -1)
-          continue;
+        // if (temp_labels[j] == -1)
+        //   continue;
         ++rec_info[i_ver].LabelMap[temp_labels[j]];
       }
     }
@@ -444,25 +401,11 @@ void CheckVertices(std::string tracfile = "o2trac_its.root", std::string clusfil
     }
   }
 
-  // NumContr vs NumRec
-  /*
-    for (int i = 0; i < rec_info.size(); ++i)
-    {
-      if (rec_info[i].GetTopLabel() == -1)
-        std::cout << "false : " << "ev # " << rec_info[i].GetTopLabel() << "\tNum_contr : " << rec_info[i].NumContr << "\n";
-      else
-        std::cout << "ev # " << rec_info[i].GetTopLabel() << "\tNum_contr : " << rec_info[i].NumContr << "\tNum_rec : " << mc_info[rec_info[i].GetTopLabel()].NumTrIB_rec << "\n";
-    }*/
-
-  // Printing full information about the events
-  /*
-  // for (auto &elem : eventIdArr)
-  //   std::cout << elem << "\t";
-  // std::cout << "\n\n\n";
-  for (unsigned int n = 0; n < N_total; ++n)
+  // printing the info
+  //  Printing full information about the events
+  for (unsigned int n = 0; n < num_ev; ++n)
   {
-    std::cout << "=================================== Ev #" << n << " =================================== \n";
-    std::cout << "\tNumrec = " << mc_info[n].NumTrIB_rec << "\tNumsim = " << mc_info[n].NumTrIB_mc << "\n";
+    std::cout << "ev # " << n << "\n";
     unsigned int counter = 0u;
     for (unsigned int i = 0; i < rec_info.size(); ++i)
     {
@@ -470,18 +413,16 @@ void CheckVertices(std::string tracfile = "o2trac_its.root", std::string clusfil
         counter += 1;
     }
     if (counter == 0)
-      std::cout << "------------------FALSE------------------\n";
+      std::cout << "\tnan\n";
     else
     {
       for (unsigned int i = 0; i < rec_info.size(); ++i)
       {
         if (rec_info[i].GetTopLabel() == (int)n)
         {
-          if (rec_info[i].Purity() < 1)
+          if (rec_info[i].Purity() <= 1)
           {
-            std::cout << "------------------TRUE------------------\n";
             std::cout << "\tNumContr = " << rec_info[i].NumContr << "\tPurity = " << rec_info[i].Purity() << std::endl;
-            std::cout << "Possible vertex --> Label Map\n";
             for (auto &el : rec_info[i].LabelMap)
               std::cout << "\t\t\t" << el.first << " " << el.second << std::endl;
           }
@@ -489,12 +430,12 @@ void CheckVertices(std::string tracfile = "o2trac_its.root", std::string clusfil
       }
     }
   }
-  std::cout << "\n\n\n\n";*/
+  std::cout << "\n\n\n\n";
 
-  // Printing the efficiency
-  unsigned int N_dublicated = 0u, N_untrue = 0u, N_successful = 0u;
-  const unsigned int N_total = num_ev;
-  for (unsigned int n = 0; n < N_total; ++n)
+  // Calculation and separation of different types of reconstructed vertices
+  unsigned int N_duplicated_once = 0u, N_miss = 0u, N_successful = 0u, N_duplicated_total = 0u;
+  const unsigned int N_total_sim = num_ev;
+  for (unsigned int n = 0; n < num_ev; ++n)
   {
     unsigned int counter = 0u;
     for (unsigned int i = 0; i < rec_info.size(); ++i)
@@ -505,50 +446,30 @@ void CheckVertices(std::string tracfile = "o2trac_its.root", std::string clusfil
     if (counter == 1)
       N_successful += 1;
     else if (counter > 1)
-      N_dublicated += 1;
+    {
+      N_duplicated_once += 1;
+      N_duplicated_total += counter;
+    }
     else
-      N_untrue += 1;
+      N_miss += 1;
   }
+  unsigned int N_good = N_duplicated_once + N_successful;
+  unsigned int N_duplicated = N_duplicated_total - N_duplicated_once;
 
-  // Vertices with purity < 100 %, that contains two kinds of labels that are equally suitable for 2 events? Lets check it
-  // How many vertices could we describe with labels from other vertices?
-  std::vector<unsigned int> suspicious_labels;
+  // Calculation of fake vertices
+  unsigned int N_fake = 0u;
   for (unsigned int i = 0; i < rec_info.size(); ++i)
   {
-    if (rec_info[i].Purity() < 100)
-    {
-      for (const auto &[key, value] : rec_info[i].LabelMap)
-      {
-        if ((int)key != rec_info[i].GetTopLabel())
-          suspicious_labels.push_back(key);
-      }
-    }
-  }
-  unsigned int N_skipped = 0u;
-  for (unsigned int n = 0; n < N_total; ++n)
-  {
-    unsigned int counter = 0u;
-    for (unsigned int i = 0; i < rec_info.size(); ++i)
-    {
-      if (rec_info[i].GetTopLabel() == (int)n)
-        counter += 1;
-    }
-    if (counter == 0)
-    {
-      for (auto &elem : suspicious_labels)
-      {
-        if (elem == n)
-          N_skipped += 1;
-      }
-    }
+    if (rec_info[i].GetTopLabel() == -1)
+      N_fake += 1;
   }
 
   // Calculation of the purity and efficiency
   double mPurity = 0;
   int mEfficiency = 0;
-  for (unsigned int n = 0; n < N_total; ++n)
+  for (unsigned int n = 0; n < num_ev; ++n)
   {
-    std::vector<unsigned int> temp; //indices arr
+    std::vector<unsigned int> temp; // indices arr
     for (unsigned int i = 0; i < rec_info.size(); ++i)
     {
       if (rec_info[i].GetTopLabel() == (int)n)
@@ -564,14 +485,14 @@ void CheckVertices(std::string tracfile = "o2trac_its.root", std::string clusfil
           max_pur = temp_pur;
       }
       mPurity += max_pur;
-      mEfficiency +=1;
+      mEfficiency += 1;
     }
   }
 
   // Calculation the number of reconstructed vertices with Purity > 0.7
 
-  unsigned int N_pur_more_pers = 0u, N_pur_less_pers = 0u;
-  for (unsigned int n = 0; n < N_total; ++n)
+  unsigned int N_pur_more_perc = 0u, N_pur_less_perc = 0u;
+  for (unsigned int n = 0; n < num_ev; ++n)
   {
     unsigned int counter = 0u;
     int temp_index = -1;
@@ -586,39 +507,33 @@ void CheckVertices(std::string tracfile = "o2trac_its.root", std::string clusfil
     if (counter == 1 && temp_index >= 0)
     {
       if (rec_info[temp_index].Purity() >= 0.7)
-        N_pur_more_pers += 1;
+        N_pur_more_perc += 1;
       else
-        N_pur_less_pers += 1;
+        N_pur_less_perc += 1;
     }
   }
 
   std::cout << "\n--------------------------------------Results--------------------------------------\n";
 
-  std::cout << "\nN_total = " << N_total
+  std::cout << "N_total_rec = " << rec_info.size() << "\n";
+  std::cout << "\nN_total_sim = " << N_total_sim
             << "\nN_successful = " << N_successful
-            << "\nN_dublicated = " << N_dublicated
-            << "\nN_untrue = " << N_untrue
-            << "\nN_skipped = " << N_skipped
-            << "\nN_vertices_with_purity>=0.7 = " << N_pur_more_pers
-            << "\nN_vertices_with_purity<0.7 = " << N_pur_less_pers << "\n";
+            << "\nN_duplicated(counted one time) = " << N_duplicated_once
+            << "\nN_duplicated(total) = " << N_duplicated_total << "\n"
+            << "\nN_miss = " << N_miss
+            << "\nN_fake = " << N_fake
+            << "\nN_good = " << N_good
+            << "\nN_duplicated = " << N_duplicated << "\n"
+            << "\nN_vertices_with_purity>=0.7 = " << N_pur_more_perc
+            << "\nN_vertices_with_purity<0.7 = " << N_pur_less_perc << "\n";
 
-  std::cout << "\nEfficiency for vertices : " << (double)mEfficiency /  N_total
-            << "\nPersentage of dublicated vertices : " << (double)N_dublicated / N_total
-            << "\nPersentage of untrue vertices : " << (double)N_untrue / N_total
-            << "\nPersentage of skipped vertices : " << (double)N_skipped / N_total
-            << "\nPersentage of vertices with purity >= 0.7  : " << (double)N_pur_more_pers / N_total
-            << "\nPersentage of vertices with purity < 0.7 : " << (double)N_pur_less_pers / N_total << "\n";
+  std::cout << "\nEfficiency for vertices = " << (double)mEfficiency / N_total_sim
+            << "\nPercentage of vertices with purity (>= 0.7)  = " << (double)N_pur_more_perc / N_total_sim
+            << "\nPercentage of vertices with purity (< 0.7) = " << (double)N_pur_less_perc / N_total_sim << "\n";
 
-  std::cout << "Mean Purity : " << mPurity / N_total << "\n";
-
+  std::cout << "Mean Purity = " << mPurity / N_total_sim << "\n";
   //============================================================================================================================
-  //============================================================================================================================
-  //============================================================================================================================
-  //============================================================================================================================
-  //============================================================================================================================
-
-  //====================================================PLOTS===================================================================
-
+    //====================================================PLOTS===================================================================
   /*
   int num_bins_pos = 200;
   double x_max = 2.1, x_min = -x_max;
