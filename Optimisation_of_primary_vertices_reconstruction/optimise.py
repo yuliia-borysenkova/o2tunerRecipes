@@ -59,7 +59,6 @@ def buid_plot_quadrupole_axes(Ntrial_x_axe, loss_y_axe, phi_y_axe, NContr_y_axe,
     #ms = marker size, mfc = marker face color, mew = marker edge width, mec = marker edge color, lw = line width
     # ls = '-', lw = 1, marker = '.', mec = 'k', mew = 0.5, mfc = "c", ms = 7
     ax1.plot(Ntrial_x_axe, loss_y_axe, color="blue", ls = '-', lw = 0.5, marker = '.', mec = 'blue', mew = 0.5, mfc = "royalblue", ms = 7)
-    ax1.legend()
 
     ax2 = ax1.twinx()
     ax2.plot(Ntrial_x_axe, phi_y_axe, color="green", ls = '-', lw = 0.5, marker = '.', mec = 'green', mew = 0.5, mfc = "springgreen", ms = 7)
